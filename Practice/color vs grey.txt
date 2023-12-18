@@ -1,0 +1,25 @@
+ The matrix representation of a grayscale image and a colored (RGB) image differs in terms of the number of channels used to represent each pixel.
+
+Grayscale Image:
+
+In a grayscale image, each pixel is represented by a single intensity value, usually ranging from 0 (black) to 255 (white).
+The matrix representation is a 2D array where each element corresponds to the intensity value of a pixel.
+Example:
+
+Grayscale Image:
+[[ 0, 128, 255],
+ [64, 192, 128],
+ [32,  16,  64]]
+
+ 
+Colored (RGB) Image:
+
+In a colored image, each pixel is represented by three values: Red (R), Green (G), and Blue (B). These values typically range from 0 to 255 for each channel.
+The matrix representation is a 3D array where each element is a vector representing the RGB values of a pixel.
+Example:
+
+Colored (RGB) Image:
+[[[255,   0,   0], [  0, 255,   0], [  0,   0, 255]],
+ [[128, 128, 128], [  0,   0,   0], [255, 255, 255]],
+ [[  0,   0,   0], [255, 128,  64], [128, 192,  64]]]
+In this example, the outermost array represents rows, the next array represents columns, and the innermost array represents the RGB values for each pixel.
