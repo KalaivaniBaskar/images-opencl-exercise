@@ -9,8 +9,8 @@ __kernel void horizontal_mirror(__global const uchar *input, __global uchar *out
     
     int tmp;
     if (i < (width) && j < (height/2)) {
-       int topIndex = (height - j - 1) * width + i;
-       int bottomIndex = j * width + i;
+       int bottomIndex = (height - j - 1) * width + i;
+       int topIndex  = j * width + i;
 
         for (int channel = 0; channel < 3; ++channel) {
             output[bottomIndex * 3 + channel] = input[topIndex * 3 + channel];
