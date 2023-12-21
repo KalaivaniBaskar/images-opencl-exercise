@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
     cv::imshow("Original Image", image);
      // Display the result
     cv::imshow("Vertical mirrors", result1);
-    cv::imshow("Vertical mid", rotatedImageM);
+   // cv::imshow("Vertical mid", rotatedImageM);
 
     //cv::imshow("Rotated Image", rotatedImageR);
     cv::imwrite("original.png",image);
