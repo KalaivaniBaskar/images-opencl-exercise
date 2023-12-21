@@ -3,8 +3,8 @@ __kernel void rotate_image(__global const uchar *input, __global uchar *output, 
     int gidY = get_global_id(1);
 
     if (gidX < width && gidY < height) {
-        int newGidX = gidX;
-        int newGidY = gidY;
+        float newGidX = gidX;
+        float newGidY = gidY;
 
         // Rotation logic - example rotates image by given angle
         float angle = 60.0f;
@@ -12,11 +12,15 @@ __kernel void rotate_image(__global const uchar *input, __global uchar *output, 
         int centerX = width / 2;
         int centerY = height / 2;
 
-        newGidX = (int)((gidX - centerX) * cos(radians) - (gidY - centerY) * sin(radians) + centerX);
-        newGidY = (int)((gidX - centerX) * sin(radians) + (gidY - centerY) * cos(radians) + centerY);
+        newGidX = ((gidX - centerX) * cos(radians) - (gidY - centerY) * sin(radians) + centerX);
+        newGidY = ((gidX - centerX) * sin(radians) + (gidY - centerY) * cos(radians) + centerY);
 
-        if (newGidX >= 0 && newGidX < width && newGidY >= 0 && newGidY < height) {
-            output[newGidY * width + newGidX] = input[gidY * width + gidX];
+         // Rounding using rint
+        int xRound = rint(newGidX);
+        int yRound = rint(newGidY);
+
+        if (xRound >= 0 && xRound < width && yRound >= 0 && yRound < height) {
+            output[gidY * width + gidX] = input[yRound * width + xRound];
         }
     }
 }

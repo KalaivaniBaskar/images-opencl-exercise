@@ -30,9 +30,9 @@ endif
 
 CCFLAGS += -D DEVICE=$(DEVICE)
 
-vertical_mirror: vertical_mirror.cpp
+out: vertical_mirror.cpp
 	$(CPPC) $^ $(INC) $(CCFLAGS) $(LIBS_CV) $(LIBS_CL) -o $@
 
 
 clean:
-	rm -f vertical_mirror
+	rm -f out

@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     #endif
 
     // Load the image
-    cv::Mat image = cv::imread("../VerticalMirror/Design.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image = cv::imread("../RotateImage/dog.jpg");
     // cv::Mat image = cv::imread("./dog.jpg", cv::IMREAD_COLOR);
     
     std::cout << "image matrix size: \n rows: " << image.rows <<", cols: "<< image.cols <<"; type: "<< image.type() <<", "<<  std::endl;
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
        //   d_input = cl::Buffer(context, vec.begin(), vec.end(), true);
     
         // Create a cl::Buffer for output 
-          d_output = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(unsigned char) * image.total() * image.channels()); 
+          d_output = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(unsigned char) * image.total() * image.elemSize()); 
 
       // Create the kernel functor
  
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 
        // img dimension is usually denotes as width * height in image file properties
 
-        cl::NDRange global(image.rows, image.cols);
+        cl::NDRange global( image.cols, image.rows);
 
         horizontal_mirror(cl::EnqueueArgs(queue, global),
         d_input, d_output, C, R);
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
     cl::copy(queue, d_output, outputData.begin(), outputData.end());
 
      // Create an OpenCV Mat from the result
-    cv::Mat rotatedImage(image.rows, image.cols, CV_8UC1, outputData.data()); 
+    cv::Mat rotatedImage(image.rows, image.cols, image.type(), outputData.data()); 
 
     std::cout << "rotatedImage matrix size: \n rows: " << rotatedImage.rows <<", cols: "<< rotatedImage.cols <<"; type: "<< rotatedImage.type() <<", "<<  std::endl;
     std::cout << "rotatedImage matrix dimension : " << rotatedImage.dims<< std::endl; std::cout << "rotatedImage total : " << rotatedImage.total() << std::endl; 
@@ -131,9 +131,18 @@ int main(int argc, char *argv[])
     std::cout << "rotatedImage size: " << rotatedImage.size()<< std::endl;
 
     
+    // Concatenate images 
+    cv::Mat result;
+    cv::vconcat(image, rotatedImage, result);
+    cv::Mat result1;
+    cv::vconcat(rotatedImage, result, result1);
+
     // Display the original and rotated images
     cv::imshow("Original Image", image);
-    cv::imshow("Rotated Image", rotatedImage);
+    cv::imshow("Horizontal mirror", result1);
+    cv::imwrite("original.jpg",image);
+    cv::imwrite("horizontal.jpg",rotatedImage);
+    cv::imwrite("horizontalAll.jpg",result1);
     cv::waitKey(0);
 
     }catch (cl::Error err)

@@ -126,6 +126,8 @@ int main(int argc, char *argv[])
     // Display the original and rotated images
     cv::imshow("Original Image", image);
     cv::imshow("Rotated Image", rotatedImage);
+    cv::imwrite("original.jpg",image);
+    cv::imwrite("rotated.jpg",rotatedImage);
     cv::waitKey(0);
 
     }catch (cl::Error err)

@@ -3,8 +3,8 @@ __kernel void rotate_color_image(__global const uchar *input, __global uchar *ou
     int gidY = get_global_id(1);
 
     if (gidX < width && gidY < height) {
-        int newGidX = gidX;
-        int newGidY = gidY;
+        float newGidX = gidX;
+        float newGidY = gidY;
 
         // Rotation logic - example rotates image by 45 degrees
         float angle = 45.0f;
@@ -12,12 +12,16 @@ __kernel void rotate_color_image(__global const uchar *input, __global uchar *ou
         int centerX = width / 2;
         int centerY = height / 2;
 
-        newGidX = (int)((gidX - centerX) * cos(radians) - (gidY - centerY) * sin(radians) + centerX);
-        newGidY = (int)((gidX - centerX) * sin(radians) + (gidY - centerY) * cos(radians) + centerY);
+        newGidX = ((gidX - centerX) * cos(radians) - (gidY - centerY) * sin(radians) + centerX);
+        newGidY = ((gidX - centerX) * sin(radians) + (gidY - centerY) * cos(radians) + centerY);
 
-        if (newGidX >= 0 && newGidX < width && newGidY >= 0 && newGidY < height) {
+         // Rounding using rint
+        int xRound = rint(newGidX);
+        int yRound = rint(newGidY);
+
+        if (xRound >= 0 && xRound < width && yRound >= 0 && yRound < height) {
             for (int channel = 0; channel < 3; ++channel) {
-                output[(newGidY * width + newGidX) * 3 + channel] = input[(gidY * width + gidX) * 3 + channel];
+                output[(gidY * width + gidX) * 3 + channel] = input[(yRound * width + xRound) * 3 + channel];
             }
         }
     }

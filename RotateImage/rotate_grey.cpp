@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     std::cout << "image elem size :" << image.elemSize()<< std::endl;
     std::cout << "image channels : "  << image.channels()<< std::endl;
     std::cout << "image size: " << image.size()<< std::endl;
-
+    std::cout << "image val at " << image.at<uchar>(178,20)<< std::endl;
     if (image.empty()) {
         std::cerr << "Error: Could not read the image." << std::endl;
         return -1;
@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     std::vector<unsigned char> vec = image.isContinuous()? flat : flat.clone(); 
 
     std::cout << "Vector len: " << vec.size() << std::endl;
+    std::cout << "Vector test: " << vec[2073500] << std::endl;
 
       // Enable OpenCL for OpenCV (optional, but recommended)
    // cv::ocl::setUseOpenCL(true);
@@ -146,6 +147,8 @@ int main(int argc, char *argv[])
     // Display the original and rotated images
     cv::imshow("Original Image", image);
     cv::imshow("Rotated Image", rotatedImage);
+    cv::imwrite("original.jpg",image);
+    cv::imwrite("rotated.jpg",rotatedImage);
     cv::waitKey(0);
 
     }catch (cl::Error err)
