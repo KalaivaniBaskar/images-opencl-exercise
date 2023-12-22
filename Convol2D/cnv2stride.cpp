@@ -27,18 +27,19 @@
 int main(void)
 {   
     
-    const std::size_t M = 7;
-    const std::size_t N = 7;
+    const int M = 7;
+    const int N = 7;
     int size = M * N; 
+    int stride = 2;
     // Example input matrix
     std::array<std::array<int, N>, M> input = {{
-         {1, 2, 3, 4, 5, 6, 7},
-    {8, 9, 10, 11, 12, 13, 14},
-    {15, 16, 17, 18, 19, 20, 21},
-    {22, 23, 24, 25, 26, 27, 28},
-    {29, 30, 31, 32, 33, 34, 35},
-    {36, 37, 38, 39, 40, 41, 42},
-    {43, 44, 45, 46, 47, 48, 49},
+        {1, 2, 3, 4, 5, 6, 7},
+        {8, 9, 10, 11, 12, 13, 14},
+        {15, 16, 17, 18, 19, 20, 21},
+        {22, 23, 24, 25, 26, 27, 28},
+        {29, 30, 31, 32, 33, 34, 35},
+        {36, 37, 38, 39, 40, 41, 42},
+        {43, 44, 45, 46, 47, 48, 49},
     }};
 
     // Example filter matrix
@@ -47,12 +48,13 @@ int main(void)
         {1, 0, -1},
         {1, 0, -1}
     }};
-
-    std::array<std::array<int, N - 2>, M - 2> output;
+    int opM = ((M - 3)/ stride ) + 1;
+    int opN = ((N - 3)/ stride ) + 1;
+    std::array<std::array<int, 3>, 3> output;
 
     std::vector<int> h_input(M * N);    // input
     std::vector<int> h_filter(3 * 3);    // filter
-    std::vector<int> h_output((M-2)*(N-2));    // convolution output w stride =1, no padding 
+    std::vector<int> h_output((opM)*(opN));    // convolution output w stride =1, no padding 
 
     //flatten input to vectors to copy to buffer 
 
@@ -72,12 +74,12 @@ int main(void)
     } 
     std::cout <<"elem# in inp " << h_input.size() << std::endl;
     std::cout <<"elem# in filter " << h_filter.size() << std::endl;
-
+    std::cout <<"elem# op " << opM << " x " << opN << std::endl;
+    std::cout << "stride is " << stride << std::endl;
     cl::Buffer d_a;                        // device memory used for the input  vector
     cl::Buffer d_b;                        // device memory used for the filter  vector
     cl::Buffer d_c;                       // device memory used for the output  vector
 
-     
     try 
     {
     	// Create a context
@@ -98,22 +100,25 @@ int main(void)
             __global int* filter,                      
             __global int* output,                      
             const  int M,
-            const  int N)               
+            const  int N,
+            const int stride)               
             {                                          
             int gidI = get_global_id(0);               
-            int gidJ = get_global_id(1);               
+            int gidJ = get_global_id(1);        
+            int opM = ((M - 3)/ stride ) + 1;
+            int opN = ((N - 3)/ stride ) + 1;       
             int inp[9];    
             printf("get id i %d ,j %d \n", gidI, gidJ);
-            if( gidI < M-2 && gidJ < N-2) {
-               int cols = gidI + 3;
-               int rows = gidJ + 3; 
+            if( gidI < opM && gidJ < opN) {
+               int cols = gidI * stride + 3;
+               int rows = gidJ * stride + 3; 
                int count = 0;
 
-               for( int m = gidJ; m < rows; m++ ){
-                for(int n = gidI; n < cols; n++){
+               for( int m = gidJ * stride; m < rows; m ++ ){
+                for(int n = gidI * stride; n < cols; n ++){
                     inp[count] = input[m * M + n]; 
                     count = count + 1;
-                    printf("input at %d \n", (m * M + n));
+                    printf("input at %d is %d\n", (m * M + n), input[m * M + n]);
                 }
                }
              
@@ -123,8 +128,8 @@ int main(void)
                   sum += inp[k] * filter[k];
                } 
                printf("for i %d, j %d , sum %d\n", gidI , gidJ, sum);
-               output[gidI *(N-2) + gidJ] = sum;
-               printf("output at %d is %d \n", (gidI *(N-2) + gidJ), output[gidI *(N-2) + gidJ] );
+               output[gidI * opN + gidJ] = sum;
+               printf("output at %d is %d \n", (gidI * opN + gidJ), output[gidI * opN + gidJ] );
             }
             }                               
         )";      
@@ -147,7 +152,7 @@ int main(void)
 //  */
         // Create the kernel functor
  
-        auto cnv2 = cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer, int, int>(program, "cnv2");
+        auto cnv2 = cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer, int, int, int>(program, "cnv2");
 
        // d_a   = cl::Buffer(context, begin(h_a), end(h_a), true); 
 
@@ -155,11 +160,11 @@ int main(void)
 
         d_b = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,  sizeof(int) * 9, h_filter.data());
 
-        d_c  = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(int) * ((M-2) * (N-2)) );
+        d_c  = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(int) * ((opM) * (opN)) );
 
                
         util::Timer timer;
-        cl::NDRange global(M-2, N-2);
+        cl::NDRange global(opM, opN);
         cnv2(
             cl::EnqueueArgs(
                 queue,
@@ -168,7 +173,8 @@ int main(void)
             d_b,
             d_c,
             M,
-            N);
+            N,
+            stride);
 
         queue.finish();
 
@@ -180,7 +186,7 @@ int main(void)
         std::cout << "input " << M << N << "(ip - fil + 1) output " << M-2 <<N-2 << std::endl;
         std::cout << "output len " << h_output.size() << std::endl;
         // Test the results 
-        for(int g = 0; g < ((M-2 )* (N-2)); g++) {
+        for(int g = 0; g < ((opM )* (opN)); g++) {
             std::cout << "output " << h_output[g] << " " << std::endl;
         }
         

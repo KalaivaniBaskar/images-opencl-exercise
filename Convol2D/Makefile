@@ -29,9 +29,9 @@ endif
 
 CCFLAGS += -D DEVICE=$(DEVICE)
 
-cnv2: cnv2.cpp
+cnv2stride: cnv2stride.cpp
 	$(CPPC) $^ $(INC) $(CCFLAGS) $(LIBS) -o $@
 
 
 clean:
-	rm -f cnv2
+	rm -f cnv2stride
