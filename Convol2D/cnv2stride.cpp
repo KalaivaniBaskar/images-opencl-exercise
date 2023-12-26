@@ -114,8 +114,8 @@ int main(void)
                int rows = gidJ * stride + 3; 
                int count = 0;
 
-               for( int m = gidJ * stride; m < rows; m ++ ){
-                for(int n = gidI * stride; n < cols; n ++){
+               for( int m = gidJ * stride; m < rows; m++ ){
+                for(int n = gidI * stride; n < cols; n++){
                     inp[count] = input[m * M + n]; 
                     count = count + 1;
                     printf("input at %d is %d\n", (m * M + n), input[m * M + n]);
