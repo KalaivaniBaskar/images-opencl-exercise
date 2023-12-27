@@ -22,13 +22,14 @@
 //------------------------------------------------------------------------------
 
 #define TOL    (0.001)   // tolerance used in floating point comparisons
-#define LENGTH (1024)    // length of vectors a, b, and c
+#define LENGTH (128)    // length of vectors a, b, and c
 
 int main(void)
 {   
     int size = LENGTH; 
     int localsize = 64; 
     int group = size/localsize;
+    /*
      // a vector of 4 dimensions vec[size][size][size][size]
     // Initialization of a 4D vector with values
     std::vector<std::vector<std::vector<std::vector<int> > > > input_a = {
@@ -69,17 +70,34 @@ int main(void)
             }
         }
     };
-    // std::vector<std::vector<std::vector<std::vector<int> > > > h_c;    // c = a + b, from compute device
+    // std::vector<std::vector<std::vector<std::vector<int> > > > h_c;  
+
+    /*
     std::vector<int> h_a;    // a
     h_a.resize(size);
     // Assigns value 0 to all the elements in the vector
     std::fill(h_a.begin(), h_a.end(), 88); 
     // 0 0 0 0 0 0
     h_a[995] = 7;
+    */
+     std::vector<int> h_a = {
+        43, 12, 65, 78, 29, 41, 54, 92, -17, 88,
+        5, 36, 71, 49, 23, 68, 10, 37, 81, 95,
+        14, 77, 30, 52, 19, 63, 82, 45, 26, 58,
+        74, 8, 97, 61, 33, 70, 22, 50, 93, 16,
+        67, 38, 84, 11, 76, 27, 59, 89, 44, 69,
+        31, 53, 20, 72, 7, 85, 98, 15, 60, 34,
+        87, 24, 51, 73, 6, 42, 99, 18, 46, 79,
+        28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
+        91, 25, 62, 35, 90, 47, 75, 9, 56, 32,
+        83, 40, 94, 57, 90, 47, 75, 9, 56, 32,
+        28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
+        28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
+        28, 55, 96, 13, 66, 39, 21, 80
+    };
     std::vector<int> h_c(group);    
      
     cl::Buffer d_a;                        // device memory used for the input  a vector
-    cl::Buffer d_b;                        // device memory used for the input  b vector
     cl::Buffer d_c;                       // device memory used for the output c vector
 
     // Fill vectors a and b with random float values
@@ -105,9 +123,9 @@ int main(void)
     //   /* for checking kernel errors 
 
         const char* kernelSource = R"(
-            __kernel void vmin(__global const float* inputArray, __global float* result, const unsigned int size) {
+            __kernel void vmin(__global const int* inputArray, __global int* result, const unsigned int size) {
             // Allocate local memory for each work-group
-            __local float localMin;
+            __local int localMin;
 
             // Get global and local IDs
             const int globalID = get_global_id(0);
@@ -180,7 +198,7 @@ int main(void)
                 local), 
             d_a,
             d_c,
-            size);
+            h_a.size());
 
         queue.finish();
 
@@ -190,13 +208,15 @@ int main(void)
         cl::copy(queue, d_c, begin(h_c), end(h_c));
          
           // Input
-        for(int f = 0; f < (size); f++) {
+          std::cout <<  "\n the input \n" << std::endl;
+        for(int f = 0; f < h_a.size(); f++) {
             std::cout << h_a[f] << " ";
         } 
-        std::cout <<  "\n above input \n" << std::endl;
+        std::cout <<  "\n the output \n" << std::endl;
+
         // Test the results 
         for(int g = 0; g < (group); g++) {
-            std::cout << "at index " << g << "is " << h_c[g] << " " << std::endl;
+            std::cout << "at index " << g << " is " << h_c[g] << " " << std::endl;
         } 
         
         // Select the element with the minimum value

@@ -1,0 +1,51 @@
+#include <iostream>
+#include <vector>
+#include <cfloat>
+#include <limits.h>
+using namespace std;
+
+int main() 
+{
+    cout << "Hello, World!";
+    std::vector<int> h_a = {
+        43, 12, 65, 78, 29, 41, 54, 92, 17, 88,
+        5, 36, 71, 49, 23, 68, 10, 37, 81, 95,
+        14, 77, 30, 52, 19, 63, 82, 45, 26, 58,
+        74, 8, 97, 61, 33, 70, 22, 50, 93, 16,
+        67, 38, 84, 11, 76, 27, 59, 89, 44, 69,
+        31, 53, 20, 72, 7, 85, 98, 15, 60, 34,
+        87, 24, 51, 73, 6, 42, 99, 18, 46, 79,
+        28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
+        91, 25, 62, 35, 90, 47, 75, 9, 56, 32,
+        83, 40, 94, 57, 90, 47, 75, -9, 56, 32,
+        28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
+        28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
+        28, 55, 96, 13, 66, 39, 21, 80
+    };
+    
+    int sum = 0;
+    for(int i=0; i < h_a.size(); i++){
+      sum  += h_a[i];
+      if(i == 63 || i == 127){
+        cout<< "at i "<< i << " " << sum << endl;
+      }
+    }
+    
+
+    std::cout << "FLT_MAX: " << FLT_MAX << std::endl;
+    std::cout << "FLT_MIN: " << FLT_MIN << std::endl;
+    std::cout << "INT_MAX: " << INT_MAX << std::endl;
+    std::cout << "INT_MIN: " << INT_MIN << std::endl;
+
+
+    return 0;
+}
+
+/* output 
+Hello, World!at i 63 3258
+at i 127 6563
+FLT_MAX: 3.40282e+38
+FLT_MIN: 1.17549e-38
+INT_MAX: 2147483647
+INT_MIN: -2147483648
+*/

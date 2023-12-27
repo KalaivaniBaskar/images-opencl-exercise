@@ -29,57 +29,15 @@ int main(void)
     int size = LENGTH; 
     int localsize = 64; 
     int group = size/localsize;
-
-    /*     // a vector of 4 dimensions vec[size][size][size][size]
+     // a vector of 4 dimensions vec[size][size][size][size]
     // Initialization of a 4D vector with values
-    std::vector<std::vector<std::vector<std::vector<int> > > > input_a = {
-        {
-            {
-                {5, 3}, {5, 3}
-            }, 
-            {
-                {6, 7}, {6, 7}
-            }
-        },
-        {
-            {
-                {8, 9}, {8, 9}
-            },
-            {
-                {9, 7}, {9, 7}
-            }
-        }
-    };
+   
     // b vector 
     // Initialization of a 4D vector with values
-    std::vector<std::vector<std::vector<std::vector<int> > > > input_b = {
-        {
-            {
-                {15, 13}, {15, 13}
-            }, 
-            {
-                {16, 17}, {16, 71}
-            }
-        },
-        {
-            {
-                {18, 19}, {18, 19}
-            },
-            {
-                {91, 71}, {91, 17}
-            }
-        }
-    };
+   
     // std::vector<std::vector<std::vector<std::vector<int> > > > h_c;    // c = a + b, from compute device
-    std::vector<int> h_a;    // a
-    h_a.resize(size);
-    // Assigns value 0 to all the elements in the vector
-    std::fill(h_a.begin(), h_a.end(), 22); 
-    // 0 0 0 0 0 0
-    h_a[995] = 75;
-    */
-
-   std::vector<int> h_a = {
+   
+    std::vector<int> h_a = {
         43, 12, 65, 78, 29, 41, 54, 92, 17, 88,
         5, 36, 71, 49, 23, 68, 10, 37, 81, 95,
         14, 77, 30, 52, 19, 63, 82, 45, 26, 58,
@@ -89,15 +47,25 @@ int main(void)
         87, 24, 51, 73, 6, 42, 99, 18, 46, 79,
         28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
         91, 25, 62, 35, 90, 47, 75, 9, 56, 32,
-        83, 40, 94, 57, 90, 47, 75, 9, 2, 32,
+        83, 40, 94, 57, 90, 47, 75, -9, 101, 32,
         28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
         28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
         28, 55, 96, 13, 66, 39, 21, 80
-    };
+    }; // a
+    /*
+    h_a.resize(size);
+    // Assigns value 0 to all the elements in the vector
+    std::fill(h_a.begin(), h_a.end(), 88); 
+    // 0 0 0 0 0 0
+    //h_a[155] = 12;
+    h_a[9] = 7;
+    */
+
     std::vector<int> h_c(group);    
      
-    cl::Buffer d_a;      // device memory used for the input  a vector
-    cl::Buffer d_c;        // device memory used for the output c vector
+    cl::Buffer d_a;                        // device memory used for the input  a vector
+    cl::Buffer d_b;                        // device memory used for the input  b vector
+    cl::Buffer d_c;                       // device memory used for the output c vector
 
     // Fill vectors a and b with random float values
     // int count = LENGTH;
@@ -106,7 +74,7 @@ int main(void)
     //     h_a[i]  = rand() / (float)RAND_MAX;
     //     h_b[i]  = rand() / (float)RAND_MAX;
     // }
-      std::cout <<  " h " << h_a[0]  << "  "<< h_a[155]<< std::endl;
+      std::cout <<  " h " << h_a.size()  << " " << h_a[64] << std::endl;
     try 
     {
     	// Create a context
@@ -117,49 +85,64 @@ int main(void)
         cl::CommandQueue queue(context);
 
         // Load in kernel source, creating a program object for the context
-        //  cl::Program program(context, util::loadProgram("vmax.cl"), true);
+        //  cl::Program program(context, util::loadProgram("find_max.cl"), true);
 
     //   /* for checking kernel errors 
 
-        const char* kernelSource = R"(
-            __kernel void vmax(__global const int* inputArray, __global int* result, const unsigned int size) {
-            // Allocate local memory for each work-group
-            __local int localMax;
+            const char* kernelSource = R"(
+            #define WORK_GROUP_SIZE 64
 
-            // Get global and local IDs
-            const int globalID = get_global_id(0);
-            const int localID = get_local_id(0);
-            const int groupID = get_group_id(0);
+            __kernel void find_max(__global const int* input, __global int* output, const int size) {
+                __local int localMax[WORK_GROUP_SIZE];
 
-           // printf("global is  %d, local is  %d, group is %d \n",globalID, localID, groupID);
+                int globalID = get_global_id(0);
+                int localID = get_local_id(0);
+                int groupID = get_group_id(0);
+                int groupSize = get_local_size(0);
 
-            // Initialize localMax with the first element of the work-group
-            if (localID == 0) {
-                localMax = inputArray[globalID];
+                int localIndex = localID;
+                int globalIndex = globalID;
+
+                // Initialize local min to a large value
+                localMax[localID] = INT_MIN; 
+                // Use FLT_MAX for C++ or CL_FLT_MAX for OpenCL
+
+                barrier(CLK_LOCAL_MEM_FENCE);
+
+                // Find the minimum within the work group
+                while (globalIndex < size) {
+                    if(input[globalIndex] > localMax[localID]){
+                         localMax[localID] = input[globalIndex];
+                        // printf("here ");
+                    }
+                    globalIndex += get_global_size(0);
+                }
+               // printf("localMax[] %d is  %d\n", localID, localMax[localID]);
+
+                barrier(CLK_LOCAL_MEM_FENCE);
+
+                // Perform the reduction within the work group using tree reduction
+                for (int stride = groupSize / 2; stride > 0; stride /= 2) {
+                    if (localIndex < stride) {            
+                       
+                        // printf("localmax %d and stride %d at group %d\n", localMax[localIndex], localMax[localIndex + stride], groupID);         
+                       
+                         if(localMax[localIndex + stride] > localMax[localIndex]){
+                         localMax[localIndex] = localMax[localIndex + stride];
+                    }
+                    }
+                    barrier(CLK_LOCAL_MEM_FENCE);
+                }
+
+                // Write the result to global memory
+                if (localIndex == 0) {
+                    output[groupID] = localMax[0];
+                }
             }
-            //printf("local max %d for group %d\n", localMax, groupID);
+        )";
 
-            // Synchronize to make sure all elements are loaded into local memory
-            barrier(CLK_LOCAL_MEM_FENCE);
 
-            // Find the maximum value within the work-group
-            for (int i = localID; i < size; i += get_local_size(0)) {
-              //  printf(" local size for %d is  %d \n", i, get_local_size(0) );
-                if (inputArray[i] > localMax) {
-                    localMax = inputArray[i];
-                } 
-              // printf(" local max for %d is  %d \n",i, localMax );
-            }
-            printf("here %d ", localMax);
-            // Synchronize to make sure all threads in the work-group have finished
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            // The first thread of each work-group writes the local maximum to global memory
-            if (localID == 0) {
-                result[groupID] = localMax;
-            }
-        }                      
-        )";      
+     
          std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
          cl::Program::Sources sources(1, std::make_pair(kernelSource, strlen(kernelSource)));
@@ -179,11 +162,11 @@ int main(void)
 //*/
         // Create the kernel functor
  
-        auto vmax = cl::make_kernel<cl::Buffer, cl::Buffer, int>(program, "vmax");
+        auto find_max = cl::make_kernel<cl::Buffer, cl::Buffer, int>(program, "find_max");
 
        // d_a   = cl::Buffer(context, begin(h_a), end(h_a), true); 
 
-        d_a = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,  sizeof(int) * h_a.size(), h_a.data());
+        d_a = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,  sizeof(int) * size, h_a.data());
 
       //  d_b = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,  sizeof(int) * size*size*size*size, h_b.data());
 
@@ -193,14 +176,14 @@ int main(void)
         util::Timer timer;
         cl::NDRange global(size);
         cl::NDRange local(localsize);
-        vmax(
+        find_max(
             cl::EnqueueArgs(
                 queue,
                 global,
                 local), 
             d_a,
             d_c,
-            h_a.size());
+            size);
 
         queue.finish();
 
@@ -209,19 +192,16 @@ int main(void)
 
         cl::copy(queue, d_c, begin(h_c), end(h_c));
          
-           // Input
-        std::cout <<  "\n the input \n" << h_a.size()<< std::endl;
-        for(int f = 0; f < h_a.size(); f++) {
+          // Input
+        for(int f = 0; f < (size); f++) {
             std::cout << h_a[f] << " ";
         } 
-        std::cout <<  "\n the output \n" << std::endl;
-
+        std::cout <<  "\n above input \n" << std::endl;
         // Test the results 
         for(int g = 0; g < (group); g++) {
             std::cout << "at index " << g << "is " << h_c[g] << " " << std::endl;
         } 
-
-        // Select the element with the minimum value
+        // Select the element with the maximum value
             auto it = std::max_element(h_a.begin(), h_a.end());
             // Check if iterator is not pointing to the end of vector
             if(it != h_a.end())
