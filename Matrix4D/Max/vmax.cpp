@@ -89,7 +89,7 @@ int main(void)
         87, 24, 51, 73, 6, 42, 99, 18, 46, 79,
         28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
         91, 25, 62, 35, 90, 47, 75, 9, 56, 32,
-        83, 40, 94, 57, 90, 47, 75, 9, 2, 32,
+        83, 40, 94, 57, 90, 47, 75, -9, 23, 32,
         28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
         28, 55, 96, 13, 66, 39, 21, 80, 64, 48,
         28, 55, 96, 13, 66, 39, 21, 80
@@ -122,44 +122,40 @@ int main(void)
     //   /* for checking kernel errors 
 
         const char* kernelSource = R"(
-            __kernel void vmax(__global const int* inputArray, __global int* result, const unsigned int size) {
-            // Allocate local memory for each work-group
-            __local int localMax;
+            #define WORK_GROUP_SIZE 64
+            
+    __kernel void vmax(__global const int* inputArray, __global int* result, const unsigned int size) {
+        // Allocate local memory for each work-group
+        __local int localMaxBuffer[WORK_GROUP_SIZE];
 
-            // Get global and local IDs
-            const int globalID = get_global_id(0);
-            const int localID = get_local_id(0);
-            const int groupID = get_group_id(0);
+        // Get global and local IDs
+        const int globalID = get_global_id(0);
+        const int localID = get_local_id(0);
+        const int groupID = get_group_id(0);
 
-           // printf("global is  %d, local is  %d, group is %d \n",globalID, localID, groupID);
+        // Initialize localMaxBuffer with the element of the work-group
+        localMaxBuffer[localID] = inputArray[globalID];
 
-            // Initialize localMax with the first element of the work-group
-            if (localID == 0) {
-                localMax = inputArray[globalID];
+        // Synchronize to make sure all elements are loaded into local memory
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        // Perform parallel reduction within the work-group to find the maximum value
+        for (int stride = get_local_size(0) / 2; stride > 0; stride /= 2) {
+            if (localID < stride) {
+                // Compare and update localMaxBuffer
+                localMaxBuffer[localID] = max(localMaxBuffer[localID], localMaxBuffer[localID + stride]);
             }
-            //printf("local max %d for group %d\n", localMax, groupID);
-
-            // Synchronize to make sure all elements are loaded into local memory
+            // Synchronize to make sure all threads have updated their values
             barrier(CLK_LOCAL_MEM_FENCE);
+        }
 
-            // Find the maximum value within the work-group
-            for (int i = localID; i < size; i += get_local_size(0)) {
-              //  printf(" local size for %d is  %d \n", i, get_local_size(0) );
-                if (inputArray[i] > localMax) {
-                    localMax = inputArray[i];
-                } 
-              // printf(" local max for %d is  %d \n",i, localMax );
-            }
-            printf("here %d ", localMax);
-            // Synchronize to make sure all threads in the work-group have finished
-            barrier(CLK_LOCAL_MEM_FENCE);
+        // The first thread of each work-group writes the local maximum to global memory
+        if (localID == 0) {
+            result[groupID] = localMaxBuffer[0];
+        }
+    }
+)";
 
-            // The first thread of each work-group writes the local maximum to global memory
-            if (localID == 0) {
-                result[groupID] = localMax;
-            }
-        }                      
-        )";      
          std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
          cl::Program::Sources sources(1, std::make_pair(kernelSource, strlen(kernelSource)));
